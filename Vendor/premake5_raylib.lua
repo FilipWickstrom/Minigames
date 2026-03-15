@@ -16,7 +16,6 @@ project "Raylib"
         "Raylib/src/rshapes.c",
         "Raylib/src/rtext.c",
         "Raylib/src/rtextures.c",
-        "Raylib/src/utils.c",
         "Raylib/src/raymath.h",
         "Raylib/src/rlgl.h"
     }
