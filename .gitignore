@@ -354,6 +354,12 @@ MigrationBackup/
 *.vcxproj
 *.filters
 *.sln
+*.slnx
 
 #ImGui
 *.ini
+
+Vendor/Premake
+Vendor/ImGui
+Vendor/Raylib
+Vendor/rlImGui

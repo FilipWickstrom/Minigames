@@ -1,51 +1,41 @@
-workspace "BioshockHackingGame"
-	architecture "x64"
-	
-	configurations
-	{
-		"Debug",
-		"Release"
-	}
-
-startproject "BioshockHackingGame"
-
-outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-
-group "Dependencies"
-	include "Vendor/premake5_raylib"
-group ""
-
-project "Game"
-	location		"Game"
+project "Bioshock_Hacking"
 	kind			"ConsoleApp"
 	language		"C++"
 	staticruntime	"on"
 	systemversion	"latest"
 	cppdialect      "C++23"
 
-	targetdir("Build/Bin/" .. outputdir .. "/%{prj.name}")
-	objdir("Build/Bin-int/" .. outputdir .. "/%{prj.name}")
+	targetdir("Build/Bin/" .. outputdir)
+	objdir("Build/Bin-int/" .. outputdir)
 
+	defines { 'PROJECT_DIR="' .. os.getcwd():gsub("\\", "/") .. '"' }
 
 	files
 	{
-		"Game/**.h",
-		"Game/**.cpp"
+		"Source/**.h",
+		"Source/**.cpp"
 	}
 
 	includedirs 
 	{
-		"Vendor/Raylib/src"
-		--"Vendor/Raylib/src/external"
+		"../Vendor/Raylib/src",
+		"../Vendor/rlImGui",
+		"../Vendor/ImGui"
 	}
 	
 	links
 	{
-		"Raylib"
+		"Raylib",
+		"rlImGui",
 	}
+	
+	-- Ugly solution...
+	filter "system:windows"
+		linkoptions { "/FORCE:MULTIPLE" }
 
 	filter "system:linux"
-		links {
+		links 
+		{
             "X11",
         	"GL",
         	"GLU",
@@ -64,27 +54,3 @@ project "Game"
 		runtime "Release"
 		defines "_RELEASE"
 		optimize "On"
-				
--- Cleaning up the project
-newaction {
-	trigger		= "clean",
-	description = "onCleanProject",
-	execute     = function()
-		print("Removing build files")
-		os.rmdir("Build")
-		
-		print("Removing Visual Studio files")
-		os.rmdir(".vs")
-		os.remove("*.sln")
-		os.remove("Game/*.vcxproj")
-		os.remove("Game/*.vcxproj.filters")
-		os.remove("Vendor/*.vcxproj")
-		os.remove("Vendor/*.vcxproj.filters")
-		os.remove("**.vcxproj.user")
-			
-		print("Removing makefile")
-		os.remove("**Makefile")
-	end
-	
-	
-}
