@@ -23,7 +23,7 @@ project "Raylib"
     defines 
 	{
        "PLATFORM_DESKTOP_RGFW",
-       "GRAPHICS_API_OPENGL_46"
+       "GRAPHICS_API_OPENGL_43"
     }
 
     -- Special case for visual studio

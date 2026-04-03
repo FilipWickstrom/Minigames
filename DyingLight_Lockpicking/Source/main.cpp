@@ -21,6 +21,24 @@ Rotate lock: Mouse / right stick
 */
 
 
+void LogCallback(int logLevel, const char *text, va_list args)
+{
+    const char *color;
+
+    switch (logLevel)
+    {
+        case LOG_INFO:    color = "\033[32m"; break; // green
+        case LOG_WARNING: color = "\033[33m"; break; // yellow
+        case LOG_ERROR:   color = "\033[31m"; break; // red
+        case LOG_DEBUG:   color = "\033[36m"; break; // cyan
+        default:          color = "\033[0m";  break;
+    }
+
+    printf("%s", color);
+    vprintf(text, args);
+    printf("\033[0m\n"); // reset
+}
+
 float deg2rad(float deg)
 {
     return deg * (PI / 180);
@@ -86,10 +104,12 @@ int main()
 {
     // Set working directory
     ChangeDirectory(PROJECT_DIR);
-    
-    const Vector2 resolution(1920, 1080);
+
+    // Custom colors for the log 
+    SetTraceLogCallback(LogCallback);
     
     // Initialize Raylib and ImGui
+    const Vector2 resolution(1920, 1080);
     InitWindow(resolution.x, resolution.y, "Lockpicking");
     SetWindowState(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
     rlImGuiSetup(true);
@@ -132,22 +152,17 @@ int main()
         progressBarFontSize += 1;
     }
 
-    // TESTING AREA
-    // NEED TO BE RGBA
-    Image img = LoadImage("Assets/Textures/DyingLight2_Roof2.jpg");
+    // #### TESTING AREA ####
+    Image img = LoadImage("Assets/Textures/DyingLight2_Roof.png");
     ImageFormat(&img, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
     Texture2D input = LoadTextureFromImage(img);
     UnloadImage(img);
-    //const Texture2D texture = LoadTexture("Assets/Textures/DyingLight2_Roof2.jpg");
-    // if (IsTextureValid(texture)) {
-    //     std::printf("WE LOADED THE FUCKING IMAGE\n");
-    // }
     // Create empty output texture
     RenderTexture2D output = LoadRenderTexture(resolution.x, resolution.y);
 
     char* shaderCode = LoadFileText("Assets/Shaders/Blur.cs");
-    unsigned int shaderId = rlCompileShader(shaderCode, RL_COMPUTE_SHADER);
-    unsigned int shaderProgram = rlLoadComputeShaderProgram(shaderId);
+    unsigned int shaderId = rlLoadShader(shaderCode, RL_COMPUTE_SHADER);
+    unsigned int shaderProgram = rlLoadShaderProgramCompute(shaderId);
     UnloadFileText(shaderCode);
 
     // Game loop
@@ -164,7 +179,7 @@ int main()
         ClearBackground(BLACK);
 
         DrawTexture(output.texture, 0, 0, WHITE);
-        
+
 
         // ### DEBUG ### Random new lock
         if (IsKeyReleased(KEY_R)) 
