@@ -20,6 +20,11 @@ Rotate lock: Mouse / right stick
 * Add textures and models
 */
 
+// Blur versions
+#define BLUR_VERSION 1
+// 0. Broteforce blur (Done)
+// 1. Horizontal and vertical blur (Done)
+// 2. Shared memory to reduce texelFetches
 
 void LogCallback(int logLevel, const char *text, va_list args)
 {
@@ -115,6 +120,7 @@ int main()
     rlImGuiSetup(true);
     rlSetFramebufferWidth(resolution.x);
     rlSetFramebufferHeight(resolution.y);
+    //SetTargetFPS(60);
     
     const auto& defaultFont = GetFontDefault();
     DifficultyType difficulty = DifficultyType::EASY;
@@ -157,28 +163,66 @@ int main()
     ImageFormat(&img, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
     Texture2D input = LoadTextureFromImage(img);
     UnloadImage(img);
+
+#if BLUR_VERSION == 0
     // Create empty output texture
     RenderTexture2D output = LoadRenderTexture(resolution.x, resolution.y);
 
     char* shaderCode = LoadFileText("Assets/Shaders/Blur.cs");
     unsigned int shaderId = rlLoadShader(shaderCode, RL_COMPUTE_SHADER);
     unsigned int shaderProgram = rlLoadShaderProgramCompute(shaderId);
+    rlUnloadShader(shaderId);
     UnloadFileText(shaderCode);
+
+#elif BLUR_VERSION == 1
+    // Create empty output texture
+    RenderTexture2D output1 = LoadRenderTexture(resolution.x, resolution.y);
+    RenderTexture2D output2 = LoadRenderTexture(resolution.x, resolution.y);
+
+    char* horizontalCode = LoadFileText("Assets/Shaders/BlurHorizontal.cs");
+    unsigned int horizontalShaderId = rlLoadShader(horizontalCode, RL_COMPUTE_SHADER);
+    unsigned int horizontalShaderProgram = rlLoadShaderProgramCompute(horizontalShaderId);
+    rlUnloadShader(horizontalShaderId);
+    UnloadFileText(horizontalCode);
+
+    char* verticalCode = LoadFileText("Assets/Shaders/BlurVertical.cs");
+    unsigned int verticalShaderId = rlLoadShader(verticalCode, RL_COMPUTE_SHADER);
+    unsigned int verticalShaderProgram = rlLoadShaderProgramCompute(verticalShaderId);
+    rlUnloadShader(verticalShaderId);
+    UnloadFileText(verticalCode);
+#endif
 
     // Game loop
     while (!WindowShouldClose())
     {
+        BeginDrawing();
+        rlImGuiBegin();	
+        ClearBackground(BLACK);
+    
+    #if BLUR_VERSION == 0
         rlBindImageTexture(input.id, 0, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, true);
         rlBindImageTexture(output.texture.id, 1, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, false);
         rlEnableShader(shaderProgram);
         rlComputeShaderDispatch(resolution.x / 8, resolution.y / 8, 1);
         rlDisableShader();
-
-        BeginDrawing();
-        rlImGuiBegin();	
-        ClearBackground(BLACK);
-
+        
         DrawTexture(output.texture, 0, 0, WHITE);
+    #elif BLUR_VERSION == 1
+        rlBindImageTexture(input.id, 0, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, true);
+        rlBindImageTexture(output1.texture.id, 1, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, false);
+        rlEnableShader(horizontalShaderProgram);
+        rlComputeShaderDispatch(resolution.x / 8, resolution.y / 8, 1);
+        rlDisableShader();
+
+        rlBindImageTexture(output1.texture.id, 0, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, true);
+        rlBindImageTexture(output2.texture.id, 1, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, false);
+        rlEnableShader(verticalShaderProgram);
+        rlComputeShaderDispatch(resolution.x / 8, resolution.y / 8, 1);
+        rlDisableShader();
+
+        DrawTexture(output2.texture, 0, 0, WHITE);
+    #endif
+
 
 
         // ### DEBUG ### Random new lock
@@ -295,7 +339,17 @@ int main()
         EndDrawing();
     }
 
+    // Cleanup duty
+#if BLUR_VERSION == 0
     rlUnloadShaderProgram(shaderProgram);
+    UnloadTexture(output.texture);
+#elif BLUR_VERSION == 1
+    rlUnloadShaderProgram(verticalShaderProgram);
+    rlUnloadShaderProgram(horizontalShaderProgram);
+    UnloadTexture(output1.texture);
+    UnloadTexture(output2.texture);
+
+#endif
 
     rlImGuiShutdown();	
     CloseWindow();

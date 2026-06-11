@@ -14,10 +14,9 @@ void main()
     ivec2 size  = imageSize(inputImage);
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 
-    int kernal = 3;
+    int kernal = 10;
     vec4 sum = vec4(0.0);
     int count = 0;
-    // 3x3 kernel
     for (int y = -kernal; y <= kernal; y++)
     {
         for (int x = -kernal; x <= kernal; x++)
