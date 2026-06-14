@@ -137,32 +137,18 @@ int main()
     float maxTimeToUnlock = 2.0f;
     LockStatus lockStatus = LockStatus::UNLOCKING;
 
-    // Progress bar
-    const Vector2 progressBarPos(resolution.x * 0.5f, resolution.y * 0.55f);
-    const Vector2 progressBarSize(lockSize*2.0, resolution.y * 0.06);
-    const Vector2 progressBarPosTopLeft(progressBarPos.x - progressBarSize.x/2.0, progressBarPos.y - progressBarSize.y/2.0);
-    const char*   progressBarText = "Unlocking!";
-    Vector2       progressBarTextSize(0, 0);
-    float         progressBarFontSize = 10.0f;
-    float         progressBarTextSpacing = 10.0f;
-
-    // TODO:
-    // Change the text inside of the progressBar?
-    // 1. Unlocking!, 2. Unlocked! 3. Failed...
-    // Yellow, Green, Red
-
-    // Loop to check which fontsize is enough for the box
-    while (progressBarTextSize.y < progressBarSize.y * 0.7) 
-    {
-        progressBarTextSize = MeasureTextEx(defaultFont, progressBarText, progressBarFontSize, progressBarTextSpacing);
-        progressBarFontSize += 1;
-    }
-
-    // #### TESTING AREA ####
+    // Loading textures
     Image img = LoadImage("Assets/Textures/DyingLight2_Roof.png");
     ImageFormat(&img, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
     Texture2D input = LoadTextureFromImage(img);
     UnloadImage(img);
+    Texture2D lockTexture = LoadTexture("Assets/Textures/Lock.png");
+    Image img2 = LoadImage("Assets/Textures/Tool1.png");
+    // Resize to fit better with the scene
+    ImageResize(&img2, img2.width * 2, img2.height * 2);
+    Texture2D tool1Texture = LoadTextureFromImage(img2);
+    UnloadImage(img2);
+
 
 #if BLUR_VERSION == 0
     // Create empty output texture
@@ -223,8 +209,6 @@ int main()
         DrawTexture(output2.texture, 0, 0, WHITE);
     #endif
 
-
-
         // ### DEBUG ### Random new lock
         if (IsKeyReleased(KEY_R)) 
         {
@@ -267,7 +251,9 @@ int main()
         DrawText(difficultyText.c_str(), 0, 0, 50, WHITE);
 
         // TODO: Draw a texture here
-        DrawCircleSector(centerPos, lockSize, 0.f, -180.f, lockSize, RED);
+        //DrawCircleSector(centerPos, lockSize, 0.f, -180.f, lockSize, RED);
+        Vector2 lockPos = Vector2(centerPos.x - lockTexture.width, centerPos.y - lockTexture.height);
+        DrawTextureEx(lockTexture, lockPos, 0.0, 2.0, WHITE);
 
         Vector2 mouseDelta = GetMouseDelta();
         if (mouseDelta.x != 0.f && mouseDelta.y != 0.f) 
@@ -281,25 +267,26 @@ int main()
         lockpickAngle = std::clamp(lockpickAngle, 0.f, 180.f);
 
         // Draw the correct angle
-        float lockpickX = centerPos.x + lockSize * cos(deg2rad(lockpickAngle - 180));
-        float lockpickY = centerPos.y + lockSize * sin(deg2rad(lockpickAngle - 180));
-        DrawLine(centerPos.x, centerPos.y, lockpickX, lockpickY, WHITE);
+        Vector2 lockpick = Vector2(centerPos.x + lockSize * cos(deg2rad(lockpickAngle - 180)), centerPos.y + lockSize * sin(deg2rad(lockpickAngle - 180)));
+        DrawLineV(centerPos, lockpick, WHITE);
 
         if (IsKeyDown(KEY_A)) 
         {
-            unlockTime = std::min(unlockTime + GetFrameTime(), maxTimeToUnlock);
+            unlockTime += GetFrameTime();
+            unlockTime = std::min(unlockTime, maxTimeToUnlock);
         }
-        else if (IsKeyReleased(KEY_A)) 
+        else 
         {
-            unlockTime = 0.0f;
+            unlockTime -= GetFrameTime();
+            unlockTime = std::max(unlockTime, 0.0f);
         }
         
-        // Progress bar
-        DrawRectangleLines(progressBarPosTopLeft.x, progressBarPosTopLeft.y, progressBarSize.x, progressBarSize.y, GRAY);
-        DrawRectangle(progressBarPosTopLeft.x, progressBarPosTopLeft.y, (int)(progressBarSize.x * (unlockTime / maxTimeToUnlock)), progressBarSize.y, YELLOW);
-        DrawTextPro(defaultFont, progressBarText, progressBarPos, Vector2(progressBarTextSize.x/2, progressBarTextSize.y/2), 0, progressBarFontSize, progressBarTextSpacing, BLACK);
-
-
+        DrawTexturePro(tool1Texture, 
+                       Rectangle(0, 0, tool1Texture.width, tool1Texture.height),
+                       Rectangle(centerPos.x, centerPos.y - 100, tool1Texture.width, tool1Texture.height),
+                       Vector2(tool1Texture.width / 2.0f, tool1Texture.height / 2.0f), 
+                       std::lerp(0, -90, unlockTime / maxTimeToUnlock), WHITE);
+        
         // Do once
         if (unlockTime >= maxTimeToUnlock) 
         {
